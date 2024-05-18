@@ -1,0 +1,41 @@
+name: Compare cargo test and cargo nextest
+on: push
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    container: docker.io/rust:slim-bookworm
+
+    services:
+      redis:
+        image: docker.io/redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get upgrade
+          apt-get install -y --no-install-recommends curl
+          curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C /usr/local/cargo/bin
+
+      - name: Run nextest
+        run: cargo nextest run
+        env:
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+          CARGO_TERM_COLOR: always
+
+      - name: Run cargo test
+        run: cargo test
+        env:
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
+          CARGO_TERM_COLOR: always
